@@ -41,7 +41,7 @@ jobs:
 
       - name: Build exe
         shell: pwsh
-        run: pyinstaller --noconsole --onefile --name ManuscritOCR --add-data "tesseract;tesseract" ocr_client.py
+        run: pyinstaller --noconsole --onefile --name ManuscritOCR --add-data "tesseract;tesseract" client_ocr.py
 
       - name: Upload exe
         uses: actions/upload-artifact@v4
