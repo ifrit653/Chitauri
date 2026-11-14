@@ -15,22 +15,33 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install Tesseract
-        shell: pwsh
-        run: choco install tesseract --no-progress -y
-
-      - name: Add French language data
+      - name: Install Tesseract and bundle it with French data
         shell: pwsh
         run: |
-          $dir = "C:\Program Files\Tesseract-OCR\tessdata"
+          choco install tesseract --no-progress -y
+          $src = "C:\Program Files\Tesseract-OCR"
+          if (-not (Test-Path "$src\tesseract.exe")) {
+            Get-ChildItem "C:\Program Files"
+            throw "tesseract.exe not found in $src"
+          }
+          New-Item -ItemType Directory -Force "$src\tessdata" | Out-Null
           Invoke-WebRequest `
             -Uri "https://github.com/tesseract-ocr/tessdata/raw/main/fra.traineddata" `
-            -OutFile "$dir\fra.traineddata"
-          Get-ChildItem $dir
+            -OutFile "$src\tessdata\fra.traineddata"
+          New-Item -ItemType Directory -Force tesseract | Out-Null
+          Copy-Item "$src\*" tesseract -Recurse -Force
+          Get-ChildItem tesseract\tessdata -Filter *.traineddata |
+            Where-Object { $_.BaseName -notin @("fra", "eng") } |
+            Remove-Item
+          Get-ChildItem tesseract\tessdata
+
+      - name: Install Python packages
+        shell: pwsh
+        run: pip install pytesseract pillow python-docx pyinstaller
 
       - name: Build exe
-        shell: cmd
-        run: call build.bat
+        shell: pwsh
+        run: pyinstaller --noconsole --onefile --name ManuscritOCR --add-data "tesseract;tesseract" ocr_client.py
 
       - name: Upload exe
         uses: actions/upload-artifact@v4
